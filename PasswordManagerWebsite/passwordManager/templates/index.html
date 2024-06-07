@@ -1,0 +1,113 @@
+<html>
+
+<head>
+    <title>Password Manager</title>
+</head>
+
+<body>
+    <span>Master password: </span>
+    {% csrf_token %}
+    <input id="master_pswd" type="password">
+    <input type="button" value="set" onclick="set_masterpass()">
+    <br>
+    <input id="new_website" type="text">
+    <input id="new_username" type="text">
+    <input id="new_password" type="password">
+    <input type="button" value="set" onclick="create_password()">
+
+    <table>
+        <tr>
+            <th>website</th>
+            <th>username</th>
+            <th>password</th>
+        </tr>
+        {% for password in passwords %}
+            <tr>
+                <td>{{ password.website }}</td>
+                <td>{{ password.username }}</td>
+                <td id="pswd-{{password.website}}"></td>
+                <td><input type="button" id="pswd-button-{{password.website}}" value="Reveal" onclick="get_password('{{password.website}}')"></td>
+            </tr>
+        {% endfor %}
+    </table>
+</body>
+
+
+<script>
+// from w3schools
+function getCookie(cname) {
+  let name = cname + "=";
+  let decodedCookie = decodeURIComponent(document.cookie);
+  let ca = decodedCookie.split(';');
+  for(let i = 0; i <ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) == ' ') {
+      c = c.substring(1);
+    }
+    if (c.indexOf(name) == 0) {
+      return c.substring(name.length, c.length);
+    }
+  }
+  return "";
+}
+
+function set_masterpass() {
+    var password = document.getElementById("master_pswd").value;
+    fetch("http://localhost:8000/set_masterpass", {
+        method: "POST",
+        body: JSON.stringify({
+            pswd: password,
+        }),
+        headers: {
+            "Content-type": "application/json; charset=UTF-8",
+            "X-CSRFToken": getCookie("csrftoken"),
+        }
+    });
+}
+
+function get_password(website_name) {
+    fetch("http://localhost:8000/get_password/" + website_name, {
+        method: "GET",
+        headers: {
+            "Content-type": "application/json; charset=UTF-8",
+            "X-CSRFToken": getCookie("csrftoken"),
+        }
+    }).then((response) => {
+        if(response.status != 200)
+            return;
+
+        return response.text();
+    }).then((data) => {
+        document.getElementById("pswd-" + website_name).innerHTML = data;
+        var button = document.getElementById("pswd-button-" + website_name);
+        button.value = "Hide";
+        button.onclick = () => {hide_password(website_name)};
+    });
+}
+
+function hide_password(website_name) {
+    document.getElementById("pswd-" + website_name).innerHTML = "";
+    var button = document.getElementById("pswd-button-" + website_name);
+    button.value = "Reveal";
+    button.onclick = () => {get_password(website_name)};
+}
+
+function create_password() {
+    var website = document.getElementById("new_website").value;
+    var username = document.getElementById("new_username").value;
+    var password = document.getElementById("new_password").value;
+    fetch("http://localhost:8000/create_password", {
+        method: "POST",
+        body: JSON.stringify({
+            website: website,
+            username: username,
+            password: password,
+        }),
+        headers: {
+            "Content-type": "application/json; charset=UTF-8",
+            "X-CSRFToken": getCookie("csrftoken"),
+        }
+    });
+}
+</script>
+</html>
